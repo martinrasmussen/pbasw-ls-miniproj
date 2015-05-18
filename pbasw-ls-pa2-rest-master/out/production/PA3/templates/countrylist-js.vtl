@@ -1,0 +1,56 @@
+#set($jQuery = '$') ## Velocity parse fix for jQuery
+
+${jQuery}.each( [ "put", "delete" ], function( i, method ) {
+  jQuery[ method ] = function( url, data, callback, type ) {
+    if ( jQuery.isFunction( data ) ) {
+      type = type || callback;
+      callback = data;
+      data = undefined;
+    }
+
+    return jQuery.ajax({
+      url: url,
+      type: method,
+      dataType: type,
+      data: data,
+      success: callback
+    });
+  };
+});
+
+${jQuery}(".delete").click(function(e){
+
+            $.ajax({
+                url: '/countries',
+                type: 'DELETE',
+                data: e.target.name,
+                contentType: "application/json; charset=utf-8",
+                success: function(result) {
+                    console.log(result);
+                    console.log(e.target.name);
+                }
+            });
+
+
+});
+
+${jQuery}("#add").submit(function(e){
+e.preventDefault();
+$.ajax({
+    url: '/countries',
+    type: 'POST',
+    async: true,
+    data: $("#inputCountry").val(),
+    success: function(result) {
+        console.log(result);
+        location.reload();
+    },
+
+});
+//$.post( "/countries", $("#inputCountry").val()).done(function(data){
+//    console.log("Data");
+//});
+
+});
+
+

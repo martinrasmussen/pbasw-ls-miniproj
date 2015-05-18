@@ -1,0 +1,115 @@
+#set($jQuery = '$') ## Velocity parse fix for jQuery
+#set($mapZoom = 6) ## Default map zoom level
+#set($xmlProxy = '/proxy/xml/')
+#set($wolframUrl = 'http://api.wolframalpha.com/v2/query?input=&appid=THPTEV-KH849EY8UT&latlong=55.6763,12.5681')
+
+/* Google maps */
+var map = null;
+var geocoder = null;
+var gcResult = null;
+var gcStatus = null;
+
+function initializeMap(){
+    var mapOptions = {
+        //zoom: ${mapZoom}
+    };
+    map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+    geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ 'address': '${country.getName()}' }, function (results, status) {
+        gcResults = results;
+        gcStatus = status;
+        if (status == google.maps.GeocoderStatus.OK) {
+            map.fitBounds(gcResults[0].geometry.viewport);
+        }
+    });
+}
+google.maps.event.addDomListener(window, "load", initializeMap);
+
+/* Map modal */
+${jQuery}('#mapModal').on('show.bs.modal', function(event) {
+
+    var modal = ${jQuery}(this);
+    modal.find('.modal-title').text('Displaying map for  ${country.getName()}');
+});
+
+${jQuery}('#mapModal').on('shown.bs.modal', function(event) {
+    console.log("RESIZING");
+    google.maps.event.trigger(map, "resize"); /* Act on the event */
+    map.fitBounds(gcResults[0].geometry.viewport);
+});
+
+/* Info modal */
+${jQuery}('#infoModal').on('show.bs.modal', function(event) {
+    var modal = ${jQuery}(this);
+    modal.find('.modal-title').text('Displaying information about ${country.getName()}');
+    modal.find('#Country').html("<b>Country: </b><br> ${country.getName()}");
+    modal.find('#Capital').html("<b>Capital: </b><br> ${country.getCapital()}");
+    modal.find('#ISO2').html("<b>ISO2: </b><br>	${country.getISO()}");
+    modal.find('#Lat').html("<b>Lat: </b><br> ${country.getLatitude()}");
+    modal.find('#Lng').html("<b>Lng: </b><br> ${country.getLongitude()}");
+    modal.find('#Currency').html("<b>Currency: </b><br>");
+
+    var originCurrency = "${country.getCurrency()}";
+    var curr1 = "USD";
+    var curr2 = "EUR";
+    var curr3 = "DKK";
+
+    var currencyResult = []
+      if(originCurrency == curr1) {
+            getCurrency(originCurrency, curr3);
+            getCurrency(originCurrency, curr2);
+        }
+        else if (originCurrency == curr2) {
+            getCurrency(originCurrency, curr1);
+            getCurrency(originCurrency, curr3);
+        }
+        else {
+            getCurrency(originCurrency, curr1);
+            getCurrency(originCurrency, curr2);
+        }
+
+
+});
+
+/* Wolfram|Alpha modal */
+var wolframUrl = 'http://api.wolframalpha.com/v2/query?input=${country.getName()}&appid=THPTEV-KH849EY8UT&latlong=${country.getLatitude()},${country.getLongitude()}';
+var waRequestUrl = '${xmlProxy}' + wolframUrl;
+var podContainer = ${jQuery}("#pod-container");
+var waRequest = new XMLHttpRequest();
+
+
+
+waRequest.open('GET', waRequestUrl, true);
+waRequest.onreadystatechange = function waReadyStatechange(){
+    if(waRequest.readyState != 4) return; // Only react to state 4 (done state)
+
+    podContainer.html("");
+    var $xml = ${jQuery}(${jQuery}.parseXML(waRequest.response));
+    var pods = $xml.find("pod");
+    for(var i = 0; i < pods.length; i++){
+        addPod(${jQuery}(pods[i]));
+    }
+}
+waRequest.send(null);
+
+function addPod(pod){
+    var podTitle = pod.attr("title");
+    var podImg = pod.find("subpod").find("img")[0].outerHTML;
+    podContainer.append('<div class="waPod"><h3>'+podTitle+'</h3>'+podImg+'</div>');
+}
+
+function getCurrency(originCurrency, srcCurrency) {
+
+    $.ajax({
+                url: '/currency/'+srcCurrency+'/'+originCurrency,
+                type: 'GET',
+                async: true,
+                success: function(result) {
+                    console.log(result);
+                    $("#infoModal").find('#Currency').append(srcCurrency + " " + result +"</br>");
+                },
+
+            });
+
+}
+
